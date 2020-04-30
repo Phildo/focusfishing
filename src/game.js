@@ -1,0 +1,76 @@
+var gg = {};
+var ENUM;
+
+var Game = function(init)
+{
+  var self = this;
+  gg.game = self;
+
+  self.dpr = window.devicePixelRatio ? window.devicePixelRatio : 1;
+  var sargs = {width:init.width,height:init.height,container:init.container,dpr:self.dpr,smoothing:1,webgl:0}
+  gg.stage = new Stage(sargs);
+  gg.canvas = gg.stage.canvas;
+  gg.ctx = gg.stage.context;
+
+  var scenes = [new LoadingScene(), new GamePlayScene()];
+  var scene_i = 0;
+
+  self.resize_requested = 0;
+  self.resize_args = 0;
+  self.request_resize = function(args)
+  {
+    self.resize_requested = 10;
+    self.resize_args = args;
+  }
+  self.resize = function(args)
+  {
+    if(args.width == gg.stage.width && args.height == gg.stage.height) return;
+    gg.stage.resize(args.width,args.height);
+    gg.canvas = gg.stage.canvas;
+    gg.ctx = gg.stage.context;
+    scenes[scene_i].resize();
+  }
+
+  var prev_t;
+  self.begin = function()
+  {
+    scenes[scene_i].ready();
+    prev_t = performance.now();
+    tick(prev_t);
+  };
+
+  var tick = function(cur_t)
+  {
+    requestAnimationFrame(tick);
+
+    if(self.resize_requested)
+    {
+      self.resize_requested--;
+      if(!self.resize_requested)
+      {
+        self.resize(self.resize_args);
+        self.resize_args = 0;
+      }
+    }
+
+    if(cur_t-prev_t > 30) scenes[scene_i].tick(2);
+    else if(cur_t-prev_t < 8) return;
+    else scenes[scene_i].tick(1);
+    scenes[scene_i].draw();
+    prev_t = cur_t;
+  };
+
+  self.nextScene = function()
+  {
+    self.setScene(scene_i+1);
+  };
+
+  self.setScene = function(i)
+  {
+    scenes[scene_i].cleanup();
+    scene_i = i;
+    scenes[scene_i].ready();
+  }
+
+};
+
